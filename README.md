@@ -37,7 +37,7 @@ Follow the steps below to set up and run the Music Streaming Web Application on 
 2. Install dependencies:
    pip install -r requirements.txt
 
-3. Run the db.py file to initialize the database with all the classes 
+3. Run the db.py file to initialize the database with all the db classes:
    python db.py
 
 4. Run the application:
