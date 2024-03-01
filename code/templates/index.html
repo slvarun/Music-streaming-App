@@ -68,7 +68,7 @@
           </a>
             <div class="hover-overlay">
                 <div class="hover-buttons">
-                  <button class="but"><i class="fa-regular fa-heart fa-sm" data-song_id="{{song.song_id}}" onclick="toggle_liked(this)"></i></button>
+                  <button class="but"><i class="fa-regular fa-heart fa-sm"></i></button>
                   <button type="button" class="btn btn-secondary dropdown-toggle but" data-bs-toggle="dropdown" aria-expanded="false"><i class="fa-solid fa-ellipsis"></i></button>
                   <ul class="dropdown-menu" aria-labelledby="dropdownMenu2">
                     <li><button class="dropdown-item" type="button">Add to Queue</button></li>
@@ -142,11 +142,10 @@
             <img src="data:image/png;base64,{{song.album.image_blob | decodeutf8}}" class="card-img-top" />
             <div class="hover-overlay">
               <div class="hover-buttons">
-                <button class="but"><i class="fa-regular fa-heart fa-sm" data-song_id="{{song.song_id}}" onclick="toggle_liked(this)"></i></button>
+                <button class="but"><i class="fa-regular fa-heart fa-sm"></i></button>
                 <button type="button" class="btn btn-secondary dropdown-toggle but" data-bs-toggle="dropdown" aria-expanded="false"><i class="fa-solid fa-ellipsis"></i></button>
                 <ul class="dropdown-menu" aria-labelledby="dropdownMenu2">
                   <li><button class="dropdown-item" type="button">Add to Queue</button></li>
-                  <li><button class="dropdown-item" type="button" data-bs-toggle="modal" data-bs-target="#exampleModal{{song.song_id}}">Rate this Song</button></li>
                </ul>
               </div>
               <div class="play-button" onclick="playsong(this)">
@@ -157,54 +156,6 @@
           <div class="card-body">
             <small class="card-title d-block text-center" style="font-size: x-small"><b>{{song.song_name}}</b></small>
             <small class="card-title d-block text-center" style="font-size: x-small"> {{song.album.artist}} </small>
-          </div>
-        </div>
-      </div>
-      <div class="modal fade" id="exampleModal{{song.song_id}}" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
-          <div class="modal-content">
-            <div class="modal-header">
-              <h5 class="modal-title" id="exampleModalLabel">Rating</h5>
-              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-              Rate song : {{song.song_name}}
-              <form class="rating" action="/rating/{{song.song_id}}" method='post'>
-                  <label>
-                    <input type="radio" name="stars" value="1" />
-                    <span class="icon">★</span>
-                  </label>
-                  <label>
-                    <input type="radio" name="stars" value="2" />
-                    <span class="icon">★</span>
-                    <span class="icon">★</span>
-                  </label>
-                  <label>
-                    <input type="radio" name="stars" value="3" />
-                    <span class="icon">★</span>
-                    <span class="icon">★</span>
-                    <span class="icon">★</span>   
-                  </label>
-                  <label>
-                    <input type="radio" name="stars" value="4" />
-                    <span class="icon">★</span>
-                    <span class="icon">★</span>
-                    <span class="icon">★</span>
-                    <span class="icon">★</span>
-                  </label>
-                  <label>
-                    <input type="radio" name="stars" value="5" />
-                    <span class="icon">★</span>
-                    <span class="icon">★</span>
-                    <span class="icon">★</span>
-                    <span class="icon">★</span>
-                    <span class="icon">★</span>
-                  </label>
-              </div>
-              <div class="modal-footer">
-                <button type="submit" class="btn btn-primary" data-bs-dismiss="modal">Save changes</button>
-              </div>
-            </form>
           </div>
         </div>
       </div>
@@ -221,7 +172,7 @@
             <img src="data:image/png;base64,{{album.image_blob | decodeutf8}}" class="card-img-top" />
             <div class="hover-overlay">
               <div class="hover-buttons">
-                <!-- <button class="but"><i class="fa-regular fa-heart fa-sm"></i></button> -->
+                <button class="but"><i class="fa-regular fa-heart fa-sm"></i></button>
                 <button type="button" class="btn btn-secondary dropdown-toggle but" data-bs-toggle="dropdown" aria-expanded="false"><i class="fa-solid fa-ellipsis"></i></button>
                <ul class="dropdown-menu" aria-labelledby="dropdownMenu2">
                 <li><button class="dropdown-item" type="button">Add to Queue</button></li>
@@ -247,7 +198,7 @@
             <img src="data:image/png;base64,{{album.image_blob | decodeutf8}}" class="card-img-top" />
             <div class="hover-overlay">
               <div class="hover-buttons">
-                <!-- <button  class="but"><i class="fa-regular fa-heart fa-sm"></i></button> -->
+                <button  class="but"><i class="fa-regular fa-heart fa-sm"></i></button>
                 <button type="button" class="btn btn-secondary dropdown-toggle but" data-bs-toggle="dropdown" aria-expanded="false"><i class="fa-solid fa-ellipsis"></i></button>
                <ul class="dropdown-menu" aria-labelledby="dropdownMenu2">
                 <li><button class="dropdown-item" type="button">Add to Queue</button></li>
@@ -278,7 +229,7 @@
             <img src="data:image/png;base64,{{album.image_blob | decodeutf8}}" class="card-img-top" />
             <div class="hover-overlay">
               <div class="hover-buttons">
-                <!-- <button  class="but"><i class="fa-regular fa-heart fa-sm"></i></button> -->
+                <button  class="but"><i class="fa-regular fa-heart fa-sm"></i></button>
                 <button type="button" class="btn btn-secondary dropdown-toggle but" data-bs-toggle="dropdown" aria-expanded="false"><i class="fa-solid fa-ellipsis"></i></button>
                <ul class="dropdown-menu" aria-labelledby="dropdownMenu2">
                 <li><button class="dropdown-item" type="button">Add to Queue</button></li>
@@ -318,7 +269,7 @@
             <img src="{{url_for('static', filename='img/music.png')}}" class="card-img-top" />
             <div class="hover-overlay">
               <div class="hover-buttons">
-                <!-- <button  class="but"><i class="fa-regular fa-heart fa-sm"></i></button> -->
+                <button  class="but"><i class="fa-regular fa-heart fa-sm"></i></button>
                 <button type="button" class="btn btn-secondary dropdown-toggle but" data-bs-toggle="dropdown" aria-expanded="false"><i class="fa-solid fa-ellipsis"></i></button>
                <ul class="dropdown-menu" aria-labelledby="dropdownMenu2">
                 <li><button class="dropdown-item" type="button">Add to Queue</button></li>
@@ -362,7 +313,7 @@
             <img src="{{url_for('static', filename='img/rock.jpeg')}}" class="card-img-top" />
             <div class="hover-overlay">
               <div class="hover-buttons">
-                <!-- <button  class="but"><i class="fa-regular fa-heart fa-sm"></i></button> -->
+                <button  class="but"><i class="fa-regular fa-heart fa-sm"></i></button>
                 <button type="button" class="btn btn-secondary dropdown-toggle but" data-bs-toggle="dropdown" aria-expanded="false"><i class="fa-solid fa-ellipsis"></i></button>
                 <ul class="dropdown-menu" aria-labelledby="dropdownMenu2">
                   <li><button class="dropdown-item" type="button">Add to Queue</button></li>
@@ -385,7 +336,7 @@
             <img src="{{url_for('static', filename='img/pop.jpg')}}" class="card-img-top" />
             <div class="hover-overlay">
               <div class="hover-buttons">
-                <!-- <button  class="but"><i class="fa-regular fa-heart fa-sm"></i></button> -->
+                <button  class="but"><i class="fa-regular fa-heart fa-sm"></i></button>
                 <button type="button" class="btn btn-secondary dropdown-toggle but" data-bs-toggle="dropdown" aria-expanded="false"><i class="fa-solid fa-ellipsis"></i></button>
                <ul class="dropdown-menu" aria-labelledby="dropdownMenu2">
                 <li><button class="dropdown-item" type="button">Add to Queue</button></li>
@@ -408,7 +359,7 @@
             <img src="{{url_for('static', filename='img/sad.jpg')}}" class="card-img-top" />
             <div class="hover-overlay">
               <div class="hover-buttons">
-                <!-- <button class="but"><i class="fa-regular fa-heart fa-sm"></i></button> -->
+                <button class="but"><i class="fa-regular fa-heart fa-sm"></i></button>
                 <button type="button" class="btn btn-secondary dropdown-toggle but" data-bs-toggle="dropdown" aria-expanded="false"><i class="fa-solid fa-ellipsis"></i></button>
                <ul class="dropdown-menu" aria-labelledby="dropdownMenu2">
                 <li><button class="dropdown-item" type="button">Add to Queue</button></li>
@@ -431,7 +382,7 @@
             <img src="{{url_for('static', filename='img/romance.jpg')}}" class="card-img-top" />
             <div class="hover-overlay">
               <div class="hover-buttons">
-                <!-- <button class="but"><i class="fa-regular fa-heart fa-sm"></i></button> -->
+                <button class="but"><i class="fa-regular fa-heart fa-sm"></i></button>
                 <button type="button" class="btn btn-secondary dropdown-toggle but" data-bs-toggle="dropdown" aria-expanded="false"><i class="fa-solid fa-ellipsis"></i></button>
                <ul class="dropdown-menu" aria-labelledby="dropdownMenu2">
                 <li><button class="dropdown-item" type="button">Add to Queue</button></li>
@@ -454,7 +405,7 @@
             <img src="{{url_for('static', filename='img/hiphop.jpg')}}" class="card-img-top" />
             <div class="hover-overlay">
               <div class="hover-buttons">
-                <!-- <button class="but"><i class="fa-regular fa-heart fa-sm"></i></button> -->
+                <button class="but"><i class="fa-regular fa-heart fa-sm"></i></button>
                 <button type="button" class="btn btn-secondary dropdown-toggle but" data-bs-toggle="dropdown" aria-expanded="false"><i class="fa-solid fa-ellipsis"></i></button>
                <ul class="dropdown-menu" aria-labelledby="dropdownMenu2">
                 <li><button class="dropdown-item" type="button">Add to Queue</button></li>
@@ -477,7 +428,7 @@
             <img src="{{url_for('static', filename='img/electro.jpg')}}" class="card-img-top" />
              <div class="hover-overlay">
               <div class="hover-buttons">
-                <!-- <button class="but"><i class="fa-regular fa-heart fa-sm"></i></button> -->
+                <button class="but"><i class="fa-regular fa-heart fa-sm"></i></button>
                 <button type="button" class="btn btn-secondary dropdown-toggle but" data-bs-toggle="dropdown" aria-expanded="false"><i class="fa-solid fa-ellipsis"></i></button>
                <ul class="dropdown-menu" aria-labelledby="dropdownMenu2">
                 <li><button class="dropdown-item" type="button">Add to Queue</button></li>
@@ -687,41 +638,7 @@
   console.log('New star rating: ' + this.value);
 });
 </script>
-<script>
-  document.addEventListener(onload,()=>{
-    let liked_classes = document.querySelectorAll(".fa-heart");
-    for(let liked_class in liked_classes){
-      let song_id = liked_class.dataset.song_id;
-      fetch('/song_liked/'+song_id).then(
-        response => {
-          return response.text;
-        }
-      ).then(
-        data=>{
-          if(data == '1'){
-            liked_class.classList.replace("fa-regular","fa-solid");
-          }
-          else{
-            liked_class.classList.replace("fa-solid","fa-regular");
-          }
-        }
-      )
-    }
-  })
 
-</script>
-<script>
-  const toggle_liked = (element)=>{
-    if(element.classList.contains('fa-regular')){
-      element.classList.replace('fa-regular','fa-solid');
-      fetch("/liked_song/"+element.dataset.song_id);
-    }
-    else{
-      element.classList.replace('fa-solid','fa-regular');
-      fetch("/disliked_song/"+element.dataset.song_id);
-    }
-  }
-</script>
 </body>
 
 </html>

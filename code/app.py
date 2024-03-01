@@ -133,61 +133,12 @@ class User_likes_ratings(db.Model):
 
 
 # ALL API USED
-@app.route('/liked_song/<string:song_id>',methods=['GET'])
-def like(song_id):
-    username = request.cookies.get('username')
-    if(username == None or username == 'none'):
-        return "0"
-    user_id = Users.query.filter(Users.user_name == username).first().user_id
-
-    print(song_id,"taggg-1")
-    liked = User_likes_ratings.query.filter(User_likes_ratings.song_id==song_id,User_likes_ratings.user_id == user_id).first()
-    # print(liked.song_id,"taggg")
-    if(liked):
-        liked.song_liked = 1
-        db.session.commit()
-    else:
-        print("else     ")
-        U_l_r = User_likes_ratings(user_id=user_id,song_id=song_id,song_liked=1)
-        db.session.add(U_l_r)
-        db.session.commit()
-    return '1'
-
-@app.route('/disliked_song/<string:song_id>',methods=['GET'])
-def dislike(song_id):
-    username = request.cookies.get('username')
-    if(username == None or username == 'none'):
-        return "0"
-    user_id = Users.query.filter(Users.user_name == username).first().user_id
-    liked = User_likes_ratings.query.filter(User_likes_ratings.user_id == user_id, User_likes_ratings.song_id==song_id).first()
-    if(not liked):
-        U_l_r = User_likes_ratings(user_id=user_id,song_id=song_id,song_liked=0)
-        db.session.add(U_l_r)
-        db.session.commit()
-    else:
-        liked.song_liked = 0
-        db.session.commit()
-    return '1'
-
-@app.route('/song_liked/<string:song_id>',methods=['GET'])
-def get_rate(song_id):
-    username = request.cookies.get('username')
-    if(username == None or username == 'none'):
-        return "0"
-    user_id = Users.query.filter(Users.user_name == username).first().user_id
-    liked = User_likes_ratings.query.filter(User_likes_ratings.user_id == user_id and User_likes_ratings.song_id==song_id).first().song_liked
-    if(liked):
-        return str(liked)
-    else:
-        return '0'
-
-
 @app.route('/rating/<string:song_id>',methods=['POST'])
 def rate(song_id):
     rate_value = request.form['stars']
     username = request.cookies.get('username')
     user = Users.query.filter(Users.user_name == username).first()
-    U_l_r = User_likes_ratings.query.filter(User_likes_ratings.user_id == user.user_id, User_likes_ratings.song_id==song_id).first()
+    U_l_r = User_likes_ratings.query.filter(User_likes_ratings.user_id == user.user_id).first()
     if U_l_r:
         U_l_r.song_rate = rate_value
         db.session.commit()
