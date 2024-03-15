@@ -76,59 +76,18 @@ class User_likes_ratings(db.Model):
     song_rate=db.Column(db.Float,server_default=db.text('0'))
 
 
-# db.create_all()
-
-# with app.app_context():
-#     try:
-#         # Insert into Users table
-#         user1 =Users(user_id=gen_uuid(), user_name='gurudurohith@gmail.com', role='user', password=generate_password_hash("@Rohith2003",method='pbkdf2:sha256'))
-#         db.session.add(user1)
-
-#         # Insert into Albums table
-#         album1 = Albums(album_id=gen_uuid(), album_name='Album 1', album_owner_id=user1.user_id)
-#         db.session.add(album1)
-        
-
-#         # Insert into Songs table
-#         song1 = Songs(song_id=gen_uuid(), song_name='Song 1', album=album1, duration=300, genre='Rock')
-#         song2 = Songs(song_id=gen_uuid(), song_name='Song 2', album=album1, duration=300, genre='Pop')
-#         song3 = Songs(song_id=gen_uuid(), song_name='Song 3', album=album1, duration=300, genre='Classical')
-#         db.session.add_all([song1,song2,song3])
-        
-
-
-#         # Insert into Playlists table
-#         playlist2 = Playlists(playlist_id=gen_uuid(), playlist_name='Playlist 2', playlist_owner_id=user1.user_id)
-#         db.session.add_all([playlist1,playlist2])
-        
-
-
-#         # Insert into Playlist_songs table
-#         playlist_song2 = Playlist_songs(song_id=song1.song_id, playlist_id=playlist2.playlist_id)
-#         playlist_song3 = Playlist_songs(song_id=song2.song_id, playlist_id=playlist2.playlist_id)
-#         playlist_song4 = Playlist_songs(song_id=song3.song_id, playlist_id=playlist1.playlist_id)
-#         db.session.add_all([playlist_song1,playlist_song2,playlist_song3,playlist_song4])
-
-#         # Commit the changes to the database
-#         db.session.commit()
-#     except:
-#         db.session.rollback()
+class UserActivity(db.Model):
+    __tablename__ = "User_activity"
+    entry_id = db.Column("entry", db.String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_ID = db.Column("user_id", db.String)
+    date = db.Column("login_date", db.DateTime, default=func.now())
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+def add_user_login(user_ID, date=None):
+    entry = UserActivity(user_ID=user_ID, date=date)
+    db.session.add(entry)
+    db.session.commit()
 
 
 
@@ -305,13 +264,6 @@ def find_album(album_name):
 
 
 
-
-
-
-
-
-
-
 # ALL ROUTES USED 
 @app.route('/song/<string:song_id>',methods=['GET'])
 def showsong(song_id):
@@ -404,7 +356,20 @@ def admin_view():
             tc = user.filter(Users.role == "creator").count()
             ts = Songs.query.count()
             ta = Albums.query.count()
-            return render_template("admin.index.html",tu = tu,tc = tc,ts = ts,ta = ta,username = request.cookies.get("username"))
+            result = db.session.query(func.date(UserActivity.date).label('login_date'), func.count(func.distinct(UserActivity.user_ID)).label('unique_user_count')).\
+            group_by(func.date(UserActivity.date)).all()
+            res = []
+            for row in result:
+                print(f"On {row.login_date}, {row.unique_user_count} unique user(s) visited.")
+                temp = []
+                tdate, tmonth, tyear= row.login_date.split("-")
+                tyear = tyear.split()[0]
+                temp.append(tdate)
+                temp.append(tmonth)
+                temp.append(tyear)
+                temp.append(row.unique_user_count)
+                res.append(temp)
+            return render_template("admin.index.html",tu = tu,tc = tc,ts = ts,ta = ta,username = request.cookies.get("username"),result = res)
         
 @app.route("/admin",methods=['GET','POST'])
 @app.route("/admin/signin",methods=['GET','POST'])
@@ -458,13 +423,14 @@ def upload():
         data = base64.b64encode(image_bytes_io.getvalue())
         user = Users.query.filter(Users.user_name==request.cookies.get("username")).first()
         album1 = Albums(album_id=gen_uuid(), album_name=album_name, album_owner_id=user.user_id,artist=publisher,image_blob=data)
-        try:
-            db.session.add(album1)
-            db.session.commit()
-        except:
-            print("album didnt get added")
-            db.session.rollback()
-            redirect('/uploadalbum')
+        # try:
+        print(album1)
+        db.session.add(album1)
+        db.session.commit()
+        # except:
+        #     print("album didnt get added")
+        #     db.session.rollback()
+        #     return redirect('/uploadalbum')
         return render_template('redirect.html',href='/creator',data='Operation completed successfully;The album has been added to the collection,Please add songs to your album')
 
 @app.route("/creator")
@@ -535,6 +501,9 @@ def signin():
         user_name = request.form['email']
         password = request.form['password']
         user = Users.query.filter(Users.user_name==user_name).first()
+
+        if user.role != 'admin':
+            add_user_login(user.user_id)
         if user == None:
             return render_template('signin.html',flag=-2)
         if check_password_hash(user.password,password):
@@ -548,6 +517,7 @@ def signin():
 
 @app.route("/signup",methods=['POST'])
 def signup():
+    print("hi")
     if request.method == 'POST':
         user_name = request.form['email']
         password = request.form['password']

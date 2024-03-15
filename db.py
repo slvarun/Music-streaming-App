@@ -10,8 +10,8 @@ from io import BytesIO
 from datetime import datetime
 from sqlalchemy import func
 
-cur_dir = os.path.abspath(os.path.dirname(_file_))
-app = Flask(_name_)
+cur_dir = os.path.abspath(os.path.dirname(__file__))
+app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(cur_dir, "Music_Streaming.db")
 db = SQLAlchemy()
 db.init_app(app)
@@ -66,5 +66,12 @@ class User_likes_ratings(db.Model):
     song_id=db.Column(db.String,db.ForeignKey('songs.song_id'),primary_key=True,nullable=False)
     song_liked=db.Column(db.Integer,server_default=db.text('0'))
     song_rate=db.Column(db.Float,server_default=db.text('0'))
+class UserActivity(db.Model):
+    __tablename__ = "User_activity"
+    entry_id = db.Column("entry", db.String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_ID = db.Column("user_id", db.String)
+    date = db.Column("login_date", db.DateTime, default=func.now())
+
+
 
 db.create_all()
