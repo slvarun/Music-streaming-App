@@ -31,18 +31,22 @@ Follow the steps below to set up and run the Music Streaming Web Application on 
 
 
 1. Clone the repository:
+   ```bash
    git clone https://github.com/slvarun/Music-streaming-App.git
-
+   ```
 
 2. Install dependencies:
+   ```bash   
    pip install -r requirements.txt
-
+   ```
 3. Run the db.py file to initialize the database with all the db classes:
+   ```bash
    python db.py
-
+   ```
 4. Run the application:
+   ```bash
    python app.py
-
+   ```
 5. Access the application in your web browser at [http://localhost:5000](http://localhost:5000).
 
 ## Contributors
