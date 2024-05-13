@@ -7,13 +7,14 @@ let song_name = document.getElementsByClassName('name_song');
 let song_artist = document.getElementsByClassName('song_artist');
 let img = document.getElementsByClassName('img');
 let lyrics = document.getElementsByClassName('lyrics');
-
+let forward = document.getElementById('forward');
 
 const playalbum = (album_name)=>{
   let album_request = new XMLHttpRequest();
   masterPlay.classList.replace('fa-pause','fa-play');
   album_request.onreadystatechange = function(){
     if(this.status == 200 && this.readyState == 4){
+      console.log(this.responseText)
       let queue = JSON.parse(this.responseText)['songs'];
       for(let song=0;song<queue.length-1;song++){
         let temp = queue[song];
@@ -47,6 +48,45 @@ const playalbum = (album_name)=>{
   album_request.open('GET',request,true);
   album_request.send();
 }
+const playplaylist = (album_name)=>{
+  let album_request = new XMLHttpRequest();
+  masterPlay.classList.replace('fa-pause','fa-play');
+  album_request.onreadystatechange = function(){
+    if(this.status == 200 && this.readyState == 4){
+      console.log(this.responseText)
+      let queue = JSON.parse(this.responseText)['songs'];
+      for(let song=0;song<queue.length-1;song++){
+        let temp = queue[song];
+        delete temp['song'];
+        delete temp['img'];
+        if(sessionStorage.getItem('queue') != null){
+          let temp_queue = JSON.parse(sessionStorage.getItem("queue"));
+          temp_queue.push(temp)
+          sessionStorage.setItem('queue',JSON.stringify(temp_queue));
+        }
+        else{
+          let temp_queue = [] 
+          temp_queue.push(temp)
+          sessionStorage.setItem('queue',JSON.stringify(temp_queue));
+        }
+      }
+      masterPlay.classList.replace('fa-play','fa-pause');
+      let temp_queue = queue[queue.length-1];
+      audio.src = ("data:audio/wav;base64," + temp_queue['song']);
+      audio.currentTime = 0;
+      audio.play();
+      delete temp_queue['song'];
+      setdata_in_nav(temp_queue);
+      delete temp_queue['img'];
+      audio.currentTime = 0;
+      audio.play();
+      console.log('ok')
+    }
+  }
+  let request = "/playlist_details/"+album_name;
+  album_request.open('GET',request,true);
+  album_request.send();
+}
 
 
 const playsong = (element)=>{
@@ -76,9 +116,18 @@ const playsong = (element)=>{
         }
       }
     }
-    let request = '/add_song_queue/'+(element.childNodes[1].childNodes[0].childNodes[0].childNodes[0].nodeValue);
-    xhttp.open('GET',request,true);
-    xhttp.send(); 
+    if(typeof element == "string"){
+      let request = '/add_song_queue/'+element;
+      xhttp.open('GET',request,true);
+      xhttp.send(); 
+    }
+    else{
+
+      let request = '/add_song_queue/'+(element.childNodes[1].childNodes[0].childNodes[0].childNodes[0].nodeValue);
+      xhttp.open('GET',request,true);
+      xhttp.send(); 
+    }
+
   }
   
   audio.onended = ()=>{
@@ -97,6 +146,10 @@ const playsong = (element)=>{
       console.log(queue)
     }
   }
+
+ 
+
+
   var queue_list = JSON.parse(sessionStorage.getItem('queue'));
   if (queue_list.length != 1){
     queue_list.pop();
@@ -148,6 +201,16 @@ function updateProgressBar(event) {
   const clampedPercentage = Math.min(100, Math.max(0, percentage+1));
   progressBar.style.width = `${clampedPercentage}%`;
   audio.currentTime = clampedPercentage*audio.duration/100;
+}
+
+forward.addEventListener('click', () =>{
+  next_song();
+})
+
+function next_song() {
+  console.log("clicked forward")
+  progressBar.style.width = '98%';
+  audio.currentTime = audio.duration-1;
 }
 
 masterPlay.addEventListener("click",()=>{

@@ -1,7 +1,6 @@
-from flask import Flask, render_template, request, make_response, redirect
+from flask import Flask,session, render_template, request, make_response, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
 import os
-from werkzeug.security import generate_password_hash,check_password_hash
 import uuid
 import json 
 import time
@@ -9,9 +8,48 @@ import base64
 from io import BytesIO
 from datetime import datetime
 from sqlalchemy import func
+from authlib.integrations.flask_client import OAuth
+import random
+from datetime import datetime, timedelta
+import mailtrap as mt
+from dotenv import load_dotenv
+from pathlib import Path
+
+env_path = Path('.env')
+
+load_dotenv(dotenv_path=env_path)
+
+
+
+app = Flask(__name__)
+
+
+sender_email = os.getenv("SENDER_EMAIL")
+
+
+def generate_otp():
+    return str(random.randint(10000, 99999))
+
+
+def send_otp_email(recipient_email, otp):
+    
+    mail = mt.Mail(
+        sender=mt.Address(email=sender_email, name="Music streamer login"),
+        to=[mt.Address(email=recipient_email)],
+        subject="The otp for login is : " + otp,
+        text="Welcome to Music Streamer",
+    )
+
+    client = mt.MailtrapClient(token=os.getenv("MAILTRAP_TOKEN"))
+    client.send(mail)
+
 
 cur_dir = os.path.abspath(os.path.dirname(__file__))
 app = Flask(__name__)
+app.secret_key = os.getenv("SECRETKEY")
+app.config['SERVER_NAME'] = 'localhost:5000'
+oauth = OAuth(app)
+# app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv("DBLINK")
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(cur_dir, "Music_Streaming.db")
 db = SQLAlchemy()
 db.init_app(app)
@@ -61,12 +99,14 @@ class Songs(db.Model):
     music_blob=db.Column(db.BLOB,nullable=False,unique=True)
     # song_img=db.Column(db.BLOB,nullable=False,unique=True)
 
+
 class Users(db.Model):
     _tablename_="users"
-    user_id = db.Column(db.String,primary_key = True)
-    user_name = db.Column(db.String(50),nullable=False,unique=True)
-    role= db.Column(db.String(50),nullable=False)
-    password = db.Column(db.String,nullable=False)
+    user_id = db.Column(db.String,primary_key = True, default=lambda: str(uuid.uuid4()))
+    user_name = db.Column(db.String(50),nullable=False)
+    email = db.Column(db.String(50),nullable=False,unique=True)
+    role = db.Column(db.String(20), default ="user")
+
 
 class User_likes_ratings(db.Model):
     _tablename_="user_likes_ratings"
@@ -88,7 +128,6 @@ def add_user_login(user_ID, date=None):
     entry = UserActivity(user_ID=user_ID, date=date)
     db.session.add(entry)
     db.session.commit()
-
 
 
 # ALL API USED
@@ -245,6 +284,18 @@ def getname():
     albums = [[album.album_id, album.album_name] for album in Albums.query.all()]
     return json.dumps({'songs': songs, 'albums': albums,'trend':trend})
 
+
+
+
+
+# ALL ROUTES USED 
+@app.route('/song/<string:song_id>',methods=['GET'])
+def showsong(song_id):
+    if request.method == 'GET':
+        song = Songs.query.filter(Songs.song_id==song_id).first()
+        user = Users.query.filter(Users.user_id == song.album.album_owner_id).first()
+        return render_template('songs.html',song=song,username=user.user_name)
+
 @app.route('/album_details/<string:album_name>',methods=['GET'])
 def find_album(album_name):
     album = Albums.query.filter(Albums.album_name == album_name).first()
@@ -263,14 +314,54 @@ def find_album(album_name):
 
 
 
+@app.route('/playlist_details/<string:playlist_id>')
+def playlist_details(playlist_id):
+    # Query playlist songs
+    plist_songs = Playlist_songs.query.filter(Playlist_songs.playlist_id == playlist_id).all()
+    
+    playlist = Playlists.query.filter(Playlists.playlist_id == playlist_id).first()
+    playlist_name = playlist.playlist_name
+    playlist_owner_id = playlist.playlist_owner_id
+    playlist_owner = Users.query.filter(Users.user_id == playlist_owner_id).first()
 
-# ALL ROUTES USED 
-@app.route('/song/<string:song_id>',methods=['GET'])
-def showsong(song_id):
-    if request.method == 'GET':
-        song = Songs.query.filter(Songs.song_id==song_id).first()
-        user = Users.query.filter(Users.user_id == song.album.album_owner_id).first()
-        return render_template('songs.html',song=song,username=user.user_name)
+    # Prepare data dictionary
+    data = {
+        'name': playlist_name,
+        'artist': playlist_owner.user_name,
+        'count': len(plist_songs),
+        'songs': []
+    }
+
+    # Iterate through playlist songs
+    for song_entry in plist_songs:
+        temp = {}
+        # Query song details
+        song = Songs.query.filter(Songs.song_id == song_entry.song_id).first()
+        temp['name'] = song.song_name
+        temp['duration'] = time.strftime("%M:%S", time.gmtime(song.duration))
+        temp['genre'] = song.genre
+        temp['views'] = song.song_views
+        # Fetch album owner
+        album_owner_id = Albums.query.filter(Albums.album_id == song.album_id).first().album_owner_id
+        author = Users.query.filter(Users.user_id == album_owner_id).first().user_name
+        temp['author'] = author
+        data['songs'].append(temp)
+
+    # Convert data dictionary to JSON string
+    json_data = json.dumps(data)
+
+    return json_data
+
+
+
+
+
+
+
+
+
+
+
 
 @app.route('/album/<string:album_id>',methods=['GET'])
 def showalbum(album_id):
@@ -292,6 +383,8 @@ def showalbum(album_id):
             temp['author'] = song.album.artist
             data['songs'].append(temp)
         return render_template("album.html",username=request.cookies.get('username'),album=data,image_blob=album.image_blob)    
+
+
 
 
 @app.route('/playlist/<string:playlist_id>')
@@ -346,50 +439,80 @@ def allalbum():
 @app.route('/admin/view',methods=['GET'])
 def admin_view():
     if request.method == 'GET':
-        user_name = request.cookies.get("username")
-        user = Users.query.filter(Users.user_name==user_name).first()
-        if user == None or user.role != 'admin':
-            return redirect("/admin")
+        user = Users.query
+        tu = user.filter(Users.role != "admin").count()
+        tc = user.filter(Users.role == "creator").count()
+        ts = Songs.query.count()
+        ta = Albums.query.count()
+        result = db.session.query(func.date(UserActivity.date).label('login_date'), func.count(func.distinct(UserActivity.user_ID)).label('unique_user_count')).\
+        group_by(func.date(UserActivity.date)).all()
+        res = []
+        for row in result:
+            print(f"On {row.login_date}, {row.unique_user_count} unique user(s) visited.")
+            temp = []
+            tdate, tmonth, tyear= row.login_date.split("-")
+            tyear = tyear.split()[0]
+            temp.append(tdate)
+            temp.append(tmonth)
+            temp.append(tyear)
+            temp.append(row.unique_user_count)
+            res.append(temp)
+        return render_template("admin.index.html",tu = tu,tc = tc,ts = ts,ta = ta,username = request.cookies.get("username"),result = res)
+    
+
+
+@app.route('/request_otp', methods=['GET', 'POST'])
+def request_otp():
+    if request.method == 'POST':
+        email = request.form['email']
+        otp = generate_otp()
+        send_otp_email(email, otp)
+        # Store email and generated OTP for verification (in a session or database)
+        return redirect(url_for('verify_otp'))
+    return render_template('request_otp.html')
+
+
+@app.route('/verify_otp', methods=['GET', 'POST'])
+def verify_otp():
+    if request.method == 'POST':
+        entered_otp = request.form['otp']
+        if 'otp_request' in session:
+            stored_otp = session['otp_request']
+            print(type(stored_otp['uid']) , type(entered_otp))
+            if int(stored_otp['uid']) == int(entered_otp):
+                response = make_response(redirect("/admin/view"))
+                response.set_cookie("username", "admin", max_age=86400)
+                response.set_cookie("loggedIn", "1", max_age=86400)
+                response.set_cookie("role", "admin", max_age=86400)
+                session.pop('otp_request', None)
+                return response
+            else:
+                return render_template("admin.signin.html", flag=-3)
         else:
-            user = Users.query
-            tu = user.filter(Users.role != "admin").count()
-            tc = user.filter(Users.role == "creator").count()
-            ts = Songs.query.count()
-            ta = Albums.query.count()
-            result = db.session.query(func.date(UserActivity.date).label('login_date'), func.count(func.distinct(UserActivity.user_ID)).label('unique_user_count')).\
-            group_by(func.date(UserActivity.date)).all()
-            res = []
-            for row in result:
-                print(f"On {row.login_date}, {row.unique_user_count} unique user(s) visited.")
-                temp = []
-                tdate, tmonth, tyear= row.login_date.split("-")
-                tyear = tyear.split()[0]
-                temp.append(tdate)
-                temp.append(tmonth)
-                temp.append(tyear)
-                temp.append(row.unique_user_count)
-                res.append(temp)
-            return render_template("admin.index.html",tu = tu,tc = tc,ts = ts,ta = ta,username = request.cookies.get("username"),result = res)
-        
+            # Handle the case where 'otp_request' doesn't exist in the session
+            return render_template("admin.signin.html", flag=-1)
+
+    return render_template("admin.signin.html", flag=-2)
+
+
+
+
 @app.route("/admin",methods=['GET','POST'])
 @app.route("/admin/signin",methods=['GET','POST'])
 def admin_signin():
     if request.method == 'GET':
         return render_template("admin.signin.html")
     else:
-        user_name = request.form['email']
-        password = request.form['password']
-        user = Users.query.filter(Users.user_name==user_name).first()
+        email = request.form['email']
+        user = Users.query.filter(Users.email==email).first()
         if user == None:
             return redirect('/signin')
         if user.role == 'admin':
-            if check_password_hash(user.password,password):
-                response = make_response(redirect("/admin/view"))
-                response.set_cookie("loggedIn", "1")
-                response.set_cookie("role", "user")
-                response.set_cookie("username", user_name)
-                return response
-            return render_template('admin.signin.html',flag=-3)
+            otp = generate_otp()
+            session['otp_request'] = {'uid': otp, 'expiry': datetime.utcnow() + timedelta(minutes=5)}
+            send_otp_email(email, otp)
+
+            return render_template('verify_otp.html')
         else:
             return redirect('/signin')
 
@@ -485,55 +608,87 @@ def change():
     db.session.commit()
     return redirect("/creator")
 
-@app.route("/logout", methods=['GET'])
-def logout():
-    response = make_response(redirect("/"))
-    response.set_cookie("loggedIn", "0")
-    response.set_cookie("role", "none")
-    response.set_cookie("username", "none")
-    return response
 
 @app.route("/signin",methods=['GET','POST'])
 def signin():
     if request.method == 'GET':
-        return render_template("signin.html")
-    else:
-        user_name = request.form['email']
-        password = request.form['password']
-        user = Users.query.filter(Users.user_name==user_name).first()
+        return render_template("login.html")
+    # else:
+    #     user_name = request.form['email']
+    #     password = request.form['password']
+    #     user = Users.query.filter(Users.user_name==user_name).first()
 
-        if user.role != 'admin':
-            add_user_login(user.user_id)
-        if user == None:
-            return render_template('signin.html',flag=-2)
-        if check_password_hash(user.password,password):
-            response = make_response(redirect("/"))
-            response.set_cookie("loggedIn", "1")
-            response.set_cookie("role", "user")
-            response.set_cookie("username", user_name)
-            return response
-        else:
-            return render_template('signin.html',flag=-3)
+    #     if user.role != 'admin':
+    #         add_user_login(user.user_id)
+    #     if user == None:
+    #         return render_template('signin.html',flag=-2)
+    #     if check_password_hash(user.password,password):
+    #         response = make_response(redirect("/"))
+    #         response.set_cookie("loggedIn", "1")
+    #         response.set_cookie("role", "user")
+    #         response.set_cookie("username", user_name)
+    #         return response
+    #     else:
+    #         return render_template('signin.html',flag=-3)
 
-@app.route("/signup",methods=['POST'])
-def signup():
-    print("hi")
-    if request.method == 'POST':
-        user_name = request.form['email']
-        password = request.form['password']
-        user = Users.query.filter(Users.user_name==user_name).first()
-        if user == None:
-            with app.app_context():    
-                try:
-                    user1 = Users(user_id=gen_uuid(), user_name=user_name, role='user', password=generate_password_hash(password))
-                    db.session.add(user1)
-                    db.session.commit()
-                except:
-                    db.session.rollback()
-                    return render_template("signin.html",flag = -1)
-            return render_template("signin.html",flag=1)
-        else:
-            return render_template("signin.html",flag=0)
+
+
+@app.route('/google/')
+def google():
+
+
+    oauth.register(
+        name='google',
+        client_id=os.getenv("GOOGLE_CLIENT_ID"),
+        client_secret=os.getenv("GOOGLE_CLIENT_SECRET"),
+        server_metadata_url=os.getenv("CONF_URL"),
+        client_kwargs={
+            'scope': 'openid email profile'
+        }
+    )
+     
+    # Redirect to google_auth function
+    redirect_uri = url_for('google_auth', _external=True)
+    return oauth.google.authorize_redirect(redirect_uri)
+ 
+@app.route('/google/auth/')
+def google_auth():
+
+    token = oauth.google.authorize_access_token()
+    print(" Google User ", token['userinfo'])
+    profile_pic_url = token['userinfo']['picture']
+    print(profile_pic_url)
+    response = make_response(redirect("/"))
+    response.set_cookie("profile_pic" , str(profile_pic_url), max_age=86400)
+    response.set_cookie("username", token["userinfo"]["name"], max_age=86400)
+    response.set_cookie("loggedIn", "1", max_age=86400)
+    email = token['userinfo']['email']
+
+
+    all_users = Users.query.filter(Users.email == email).first()
+
+    user = token["userinfo"]["name"]
+
+    if all_users == None:
+        entry=Users(user_name = user,email = email)
+        db.session.add(entry)
+        db.session.commit()
+        all_users = entry
+    print(all_users)
+    add_user_login(all_users.user_id)
+    return response
+
+
+
+
+
+@app.route('/logout')
+def google_logout():
+    response = make_response(redirect("/"))
+    response.set_cookie("loggedIn", "0")
+    response.set_cookie("profile_pic", "none")
+    response.set_cookie("username", "none")
+    return response
 
 @app.route("/",methods=['GET'])
 @app.route("/index",methods=['GET'])
@@ -574,11 +729,12 @@ def index():
                                top_genre1=top_genre1,
                                top_genre2=top_genre2,
                                top_genre3=top_genre3,
-                               top_genre4=top_genre4,
+                               top_genre4=top_genre4,   
                                top_genre5=top_genre5,
                                top_genre6=top_genre6,
                                new_releases = new_releases,
-                               playlists=playlists)
+                               playlists=playlists,
+                               profile_pic = request.cookies.get('profile_pic'))
 
 
 def main():

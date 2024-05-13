@@ -47,7 +47,7 @@
           <a class="nav-link" href="/creator" tabindex="-1" aria-disabled="true">Creator</a>
           <div class="nav-item dropstart">
             <a class="nav-link dropdown-toggle" id="navbarDropdownMenuLink" role="button" data-bs-toggle="dropdown"
-              aria-expanded="false"><i class="fa-solid fa-circle-user fa-xl"></i></a>
+              aria-expanded="false"><img src="{{profile_pic}}" alt="myimage"></a>
             <ul class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
               <li><a class="dropdown-item">{{username}}</a></li>
               <li><a class="dropdown-item" href="/logout">Logout</a></li>
@@ -58,6 +58,8 @@
       </div>
     </div>
   </nav>
+  <div>
+  </div>
   <section id="TRENDING" class="container-fluid p-5">
     <h6>TRENDING NOW</h6>
     <div class="row">
@@ -331,7 +333,6 @@
     <div class="row">
       {% for playlist in playlists %}
       <div class="col-2 ">
-        <a class="card text-reset" href="/playlist/{{playlist.playlist_id}}" style="text-decoration: none;">
           <div class="image-container">
             <img src="{{url_for('static', filename='img/music.png')}}" class="card-img-top" />
             <div class="hover-overlay">
@@ -343,18 +344,18 @@
                   <li><button class="dropdown-item" type="button">Add to Queue</button></li>
                 </ul>
               </div>
-              <div class="play-button">
+              <div class="play-button" onclick="playplaylist(`{{playlist.playlist_id}}`)">
                 <button><i class="fa-solid fa-play"></i></button>
               </div>
             </div>
 
           </div>
-          <div class="card-body">
+          <div class="card-body" onclick="redirectToPlaylist(`{{ playlist.playlist_id }}`)">
             <small class="card-title d-block text-center h5"
               style="font-size: x-small"><b>{{playlist.playlist_name}}</b></small>
             </small>
           </div>
-        </a>
+        
       </div>
       {% endfor %}
     </div>
@@ -412,12 +413,12 @@
         </div>
       </div>
       <div class="mx-auto">
-        <i class="fa-solid fa-repeat ps-2 mx-1"></i>
+        <!-- <i class="fa-solid fa-repeat ps-2 mx-1"></i> -->
         <i class="fa-solid fa-backward-fast px-2"></i>
         <i class="fa-solid fa-play px-2" id="masterPlay"></i>
         <!-- <i class="fa-solid fa-pause"></i> -->
-        <i class="fa-solid fa-forward-fast px-2"></i>
-        <i class="fa-solid fa-shuffle px-2"></i>
+        <i class="fa-solid fa-forward-fast px-2" id="forward" style="cursor: pointer;"></i>
+        <!-- <i class="fa-solid fa-shuffle px-2"></i> -->
       </div>
       <div class="col-1 ms-auto">
         <i class="fa-solid fa-ellipsis px-2 ms-2"></i>
@@ -469,6 +470,9 @@
   <script>
     function redirectToAlbum(albumId) {
       window.location.href = '/album/' + albumId;
+    }
+    function redirectToPlaylist(albumId) {
+      window.location.href = '/playlist/' + albumId;
     }
     function redirectToSong(songId) {
       window.location.href = '/song/' + songId;

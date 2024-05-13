@@ -99,22 +99,14 @@
 </head>
 
 <body class="text-center" style="display: flex;">
-  {% if flag == -3 %}
-  <div class="alert alert-danger alert-dismissible fade show" role="alert">
-    <strong>WRONG Otp!!!</strong> Please Check Your Email.
-    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-  </div>
-  {% endif %}
   <div class="container text-center" id="container">
     <div class="form-container sign-in">
-      <form method="post" action="/admin" class="needs-validation" id="form">
-        <h1>Admin</h1>
-        <h5>Sign In</h5>
-        <input type="email" placeholder="Enter Email" name="email" class="form-control mt-3" required>
-        <button type="submit">Get OTP</button>
+      <form method="post" action="/verify_otp" class="needs-validation" id="form">
+        <input type="number" placeholder="Enter Otp" name="otp" class="form-control mt-3" required>
+        <button type="submit">Sign In</button>
         <br>
+        <p class="h6">Don't have admin access?<a href=""> Go to user login</a></p>
       </form>
-      <p class="h6">Don't have admin access?<a href=""> Go to user login</a></p>
     </div>
   </div>
   <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"
