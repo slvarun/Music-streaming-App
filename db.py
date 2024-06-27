@@ -5,7 +5,6 @@ import uuid
 
 from datetime import datetime
 from sqlalchemy import func
-
 from dotenv import load_dotenv
 from pathlib import Path
 
@@ -29,7 +28,7 @@ class Albums(db.Model):
     album_id = db.Column(db.String, primary_key=True)
     album_name = db.Column(db.String(50), nullable=False,unique=True)
     album_owner_id = db.Column(db.String,db.ForeignKey('users.user_id'), nullable=False)
-    image_blob=db.Column(db.BYTEA,nullable=False,unique=True)
+    image_blob=db.Column(db.LargeBinary,nullable=False,unique=True)
     album_date = db.Column(db.DateTime, nullable=False,default=datetime.utcnow)
     artist = db.Column(db.String)
     songs_in = db.relationship("Songs",backref="album")
@@ -57,8 +56,8 @@ class Songs(db.Model):
     song_views=db.Column(db.Integer,server_default=db.text('0'))
     liked=db.Column(db.Integer,server_default=db.text('0'))
     song_date = db.Column(db.DateTime, nullable=False,default=datetime.utcnow)
-    music_blob=db.Column(db.BYTEA,nullable=False,unique=True)
-    # song_img=db.Column(db.BYTEA,nullable=False,unique=True)
+    music_blob=db.Column(db.String,nullable=False,unique=True)
+    # song_img=db.Column(db.LargeBinary,nullable=False,unique=True)
 
 class Users(db.Model):
     _tablename_="users"

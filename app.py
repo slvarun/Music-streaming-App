@@ -14,8 +14,14 @@ from datetime import datetime, timedelta
 import mailtrap as mt
 from dotenv import load_dotenv
 from pathlib import Path
+from PIL import Image
+import zipfile
+import io
+import cloudinary
+import cloudinary.uploader
+from cloudinary.utils import cloudinary_url
 
-env_path = Path('.env')
+env_path = Path('Music-streaming-App/.env')
 
 load_dotenv(dotenv_path=env_path)
 
@@ -25,6 +31,9 @@ app = Flask(__name__)
 
 
 sender_email = os.getenv("SENDER_EMAIL")
+          
+
+
 
 
 def generate_otp():
@@ -46,7 +55,9 @@ def send_otp_email(recipient_email, otp):
 
 cur_dir = os.path.abspath(os.path.dirname(__file__))
 app = Flask(__name__)
-app.secret_key = os.getenv("SECRETKEY")
+app.secret_key = '\xfd{H\xe5<\x95\xf9\xe3\x96.5\xd1\x01O<\
+!\xd5\xa2\xa0\x9fR"\xa1\xa8'
+
 app.config['SERVER_NAME'] = 'localhost:5000'
 oauth = OAuth(app)
 # app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv("DBLINK")
@@ -54,6 +65,8 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(cur_dir, "Mu
 db = SQLAlchemy()
 db.init_app(app)
 app.app_context().push()
+
+
 def gen_uuid():
     return str(uuid.uuid4())
 
@@ -68,7 +81,7 @@ class Albums(db.Model):
     album_id = db.Column(db.String, primary_key=True)
     album_name = db.Column(db.String(50), nullable=False,unique=True)
     album_owner_id = db.Column(db.String,db.ForeignKey('users.user_id'), nullable=False)
-    image_blob=db.Column(db.BLOB,nullable=False,unique=True)
+    image_blob=db.Column(db.LargeBinary,nullable=False,unique=True)
     album_date = db.Column(db.DateTime, nullable=False,default=datetime.utcnow)
     artist = db.Column(db.String)
     songs_in = db.relationship("Songs",backref="album")
@@ -96,9 +109,8 @@ class Songs(db.Model):
     song_views=db.Column(db.Integer,server_default=db.text('0'))
     liked=db.Column(db.Integer,server_default=db.text('0'))
     song_date = db.Column(db.DateTime, nullable=False,default=datetime.utcnow)
-    music_blob=db.Column(db.BLOB,nullable=False,unique=True)
-    # song_img=db.Column(db.BLOB,nullable=False,unique=True)
-
+    music_blob=db.Column(db.String,nullable=False)
+    # song_img=db.Column(db.LargeBinary,nullable=False,unique=True)
 
 class Users(db.Model):
     _tablename_="users"
@@ -296,10 +308,12 @@ def showsong(song_id):
         user = Users.query.filter(Users.user_id == song.album.album_owner_id).first()
         return render_template('songs.html',song=song,username=user.user_name)
 
-@app.route('/album_details/<string:album_name>',methods=['GET'])
+@app.route('/album_details/<string:album_name>', methods=['GET'])
 def find_album(album_name):
+    # Query the album
     album = Albums.query.filter(Albums.album_name == album_name).first()
     songs = Songs.query.filter(Songs.album_id == album.album_id).all()
+    # List to store song details
     songs_list = []
     for song in songs:
         song_to_send =  dict()
@@ -307,10 +321,18 @@ def find_album(album_name):
         song_to_send['lyrics'] = song.lyrics
         song_to_send['artist'] = album.artist
         song_to_send['duration'] = song.duration
-        song_to_send['img'] = str(song.album.image_blob.decode('utf-8', 'ignore'))
-        song_to_send['song'] = str(song.music_blob.decode('utf-8', 'ignore'))
+        song_to_send['img'] = song.album.image_blob
+        zip_file = "temp.zip"
+        extract_dir = "/temp/"
+        audio_file = song.song_name + ".mp3"
+        with zipfile.ZipFile(zip_file, 'r') as zip_ref:
+            zip_ref.extract(audio_file, path=extract_dir)
+        with open(os.path.join(extract_dir, zip_file), 'rb') as audio_file:
+            audio_data = audio_file.read()
+        song_to_send['song'] = str(audio_data.decode('utf-8', 'ignore'))
         songs_list.append(song_to_send)
     return json.dumps({'songs':songs_list})
+
 
 
 
@@ -318,7 +340,6 @@ def find_album(album_name):
 def playlist_details(playlist_id):
     # Query playlist songs
     plist_songs = Playlist_songs.query.filter(Playlist_songs.playlist_id == playlist_id).all()
-    
     playlist = Playlists.query.filter(Playlists.playlist_id == playlist_id).first()
     playlist_name = playlist.playlist_name
     playlist_owner_id = playlist.playlist_owner_id
@@ -331,29 +352,26 @@ def playlist_details(playlist_id):
         'count': len(plist_songs),
         'songs': []
     }
-
     # Iterate through playlist songs
     for song_entry in plist_songs:
         temp = {}
         # Query song details
         song = Songs.query.filter(Songs.song_id == song_entry.song_id).first()
-        temp['name'] = song.song_name
-        temp['duration'] = time.strftime("%M:%S", time.gmtime(song.duration))
-        temp['genre'] = song.genre
-        temp['views'] = song.song_views
-        # Fetch album owner
-        album_owner_id = Albums.query.filter(Albums.album_id == song.album_id).first().album_owner_id
-        author = Users.query.filter(Users.user_id == album_owner_id).first().user_name
-        temp['author'] = author
-        data['songs'].append(temp)
+        if song:  # Check if the song exists
+            temp['name'] = song.song_name
+            temp['duration'] = time.strftime("%M:%S", time.gmtime(song.duration))
+            temp['genre'] = song.genre
+            temp['views'] = song.song_views
+            # Fetch album owner
+            album_owner_id = Albums.query.filter(Albums.album_id == song.album_id).first().album_owner_id
+            author = Users.query.filter(Users.user_id == album_owner_id).first().user_name
+            temp['author'] = author
+            data['songs'].append(temp)
 
     # Convert data dictionary to JSON string
     json_data = json.dumps(data)
 
     return json_data
-
-
-
 
 
 
@@ -374,6 +392,7 @@ def showalbum(album_id):
         data['artist'] = user.user_name
         data['count'] = len(songs)
         data['songs'] = list()
+
         for song in songs:
             temp = dict()
             temp['name'] = song.song_name
@@ -382,21 +401,23 @@ def showalbum(album_id):
             temp['views'] = song.song_views
             temp['author'] = song.album.artist
             data['songs'].append(temp)
+
         return render_template("album.html",username=request.cookies.get('username'),album=data,image_blob=album.image_blob)    
-
-
 
 
 @app.route('/playlist/<string:playlist_id>')
 def playlist1(playlist_id):
+
     plist = Playlist_songs.query.filter(Playlist_songs.playlist_id == playlist_id).all()
     plist_name = Playlists.query.filter(Playlists.playlist_id == playlist_id).first().playlist_name
     plist_owner = Users.query.filter(Users.user_id == Playlists.query.filter(Playlists.playlist_id == playlist_id).first().playlist_owner_id).first()
     data = dict()
+
     data['name'] = plist_name
     data['artist'] = plist_owner.user_name
     data['count'] = len(plist)
     data['songs'] = list()
+
     for i in plist:
         temp = dict()
         song_details = Songs.query.filter(Songs.song_id == i.song_id).all()
@@ -408,7 +429,11 @@ def playlist1(playlist_id):
             author = Users.query.filter(Users.user_id == Albums.query.filter(Albums.album_id == j.album_id).first().album_owner_id).first().user_name
             temp['author'] = author
             data['songs'].append(temp)
+
     return render_template("playlist.html",username=request.cookies.get('username'),album=data)    
+
+
+
 
 @app.route('/admin/allcreator',methods=['GET'])
 def allalbum():
@@ -516,23 +541,44 @@ def admin_signin():
         else:
             return redirect('/signin')
 
-@app.route("/uploadsongs/<string:album_name>",methods=['POST','GET'])
+@app.route("/uploadsongs/<string:album_name>", methods=['POST', 'GET'])
 def songs(album_name):
     if request.method == 'GET':
-        return render_template('upload.html', username=request.cookies.get("username"),upload='song',album_name=album_name)
+        return render_template('upload.html', username=request.cookies.get("username"), upload='song', album_name=album_name)
+    
     if request.method == 'POST':
+        # Create a BytesIO object to store the zip file
+        
+        # Extract data from the form
         musicname = request.form['musicName']
         lyrics = request.form['Lyrics']
         genre = request.form['Genre']
         duration = request.form['Duration']
-        music_blob = request.files['music']
-        music_bytes_io = BytesIO(music_blob.read())
-        data = base64.b64encode(music_bytes_io.getvalue())
-        album = Albums.query.filter(Albums.album_name==album_name).first()
-        song = Songs(song_id=gen_uuid(), song_name=musicname, album_id=album.album_id, duration=duration, genre=genre, music_blob = data,lyrics=lyrics)
+        
+        # Get the music file
+
+        music_blob = request.files['music'].read()
+        
+
+
+
+
+        album = Albums.query.filter(Albums.album_name == album_name).first()
+
+        print(musicname)
+        song = Songs(
+            song_id=gen_uuid(), 
+            song_name=musicname, 
+            album_id=album.album_id, 
+            duration=duration, 
+            genre=genre, 
+            music_blob=music_blob,
+            lyrics=lyrics
+        )
         db.session.add(song)
         db.session.commit()
-        return  render_template('redirect.html',href='/creator',data='Operation completed successfully;The song has been added to the album')
+        
+        return render_template('redirect.html', href='/creator', data='Operation completed successfully; The song has been added to the album')
 
 @app.route("/uploadalbum",methods=['POST','GET'])
 def upload():
@@ -542,12 +588,20 @@ def upload():
         album_name = request.form['albumName']
         publisher = request.form['artist']
         image_blob = request.files['albumFile']
-        image_bytes_io = BytesIO(image_blob.read())
-        data = base64.b64encode(image_bytes_io.getvalue())
+
+        img = Image.open(image_blob)
+
+        compressed = BytesIO()
+
+        img.save(compressed, format = img.format, optimize = True, quality = 10)
+
+        compressed_data = compressed.getvalue()
+
+        # image_bytes_io = BytesIO(img.read())
+        data = base64.b64encode(compressed_data)
         user = Users.query.filter(Users.user_name==request.cookies.get("username")).first()
         album1 = Albums(album_id=gen_uuid(), album_name=album_name, album_owner_id=user.user_id,artist=publisher,image_blob=data)
         # try:
-        print(album1)
         db.session.add(album1)
         db.session.commit()
         # except:
@@ -635,49 +689,54 @@ def signin():
 
 @app.route('/google/')
 def google():
-
-
     oauth.register(
         name='google',
         client_id=os.getenv("GOOGLE_CLIENT_ID"),
         client_secret=os.getenv("GOOGLE_CLIENT_SECRET"),
-        server_metadata_url=os.getenv("CONF_URL"),
+        server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
         client_kwargs={
             'scope': 'openid email profile'
         }
     )
+
+
+    
      
     # Redirect to google_auth function
-    redirect_uri = url_for('google_auth', _external=True)
+    redirect_uri = url_for('google_auth', _external = True)
     return oauth.google.authorize_redirect(redirect_uri)
+
  
 @app.route('/google/auth/')
 def google_auth():
-
     token = oauth.google.authorize_access_token()
-    print(" Google User ", token['userinfo'])
-    profile_pic_url = token['userinfo']['picture']
-    print(profile_pic_url)
-    response = make_response(redirect("/"))
-    response.set_cookie("profile_pic" , str(profile_pic_url), max_age=86400)
-    response.set_cookie("username", token["userinfo"]["name"], max_age=86400)
-    response.set_cookie("loggedIn", "1", max_age=86400)
-    email = token['userinfo']['email']
+    user_info = token.get('userinfo')
+    if not user_info:
+        return "User information not available", 400
 
+    print("Google User", user_info)
+    profile_pic_url = user_info.get('picture')
+    print(profile_pic_url)
+
+    response = make_response(redirect("/"))
+    response.set_cookie("profile_pic", str(profile_pic_url), max_age=86400)
+    response.set_cookie("username", user_info.get("name"), max_age=86400)
+    response.set_cookie("loggedIn", "1", max_age=86400)
+    email = user_info.get('email')
 
     all_users = Users.query.filter(Users.email == email).first()
+    user = user_info.get("name")
 
-    user = token["userinfo"]["name"]
-
-    if all_users == None:
-        entry=Users(user_name = user,email = email)
+    if all_users is None:
+        entry = Users(user_name=user, email=email)
         db.session.add(entry)
         db.session.commit()
         all_users = entry
+
     print(all_users)
     add_user_login(all_users.user_id)
+    print(response, "Response")
     return response
-
 
 
 
@@ -695,7 +754,7 @@ def google_logout():
 def index():
     user = Users.query.filter(Users.user_name == request.cookies.get('username')).first()
     songs = Songs.query.order_by(Songs.song_views.desc()).limit(4)
-    albums = db.session.query(Albums).join(Songs,Albums.album_id == Songs.album_id).group_by(Albums.album_name).order_by(func.sum(Songs.song_views)).limit(4)
+    albums = db.session.query(Albums.album_id, Albums.album_name, Albums.album_owner_id, Albums.image_blob, Albums.album_date, Albums.artist).join(Songs, Albums.album_id == Songs.album_id).group_by(Albums.album_id, Albums.album_name).order_by(func.sum(Songs.song_views).desc()).limit(4)    
     release_a = Albums.query.order_by(Albums.album_date).limit(2)
     release_s = Songs.query.order_by(Songs.song_date).limit(2)
     top_genre1 = Songs.query.filter(Songs.genre == 'ROCK').order_by(Songs.song_views.desc()).limit(10)
