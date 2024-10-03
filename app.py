@@ -17,9 +17,7 @@ from pathlib import Path
 from PIL import Image
 import zipfile
 import io
-import cloudinary
-import cloudinary.uploader
-from cloudinary.utils import cloudinary_url
+
 
 env_path = Path('Music-streaming-App/.env')
 
